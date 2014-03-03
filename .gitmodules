@@ -1,0 +1,3 @@
+[submodule "app/Plugin/MultiModelSearch"]
+	path = app/Plugin/MultiModelSearch
+	url = https://github.com/andidp/CakePhp-MultiModelSearch.git
