@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Application model for CakePHP.
  *
@@ -18,7 +19,6 @@
  * @since         CakePHP(tm) v 0.2.9
  * @license       http://www.opensource.org/licenses/mit-license.php MIT License
  */
-
 App::uses('Model', 'Model');
 
 /**
@@ -30,4 +30,44 @@ App::uses('Model', 'Model');
  * @package       app.Model
  */
 class AppModel extends Model {
+
+    public $status = array(
+                0 => 'Draft',
+                1 => 'Publish'
+            );
+
+    public function alphaNumericDashUnderscore($check) {
+        $value = array_values($check);
+        $value = $value[0];
+
+        return preg_match('|^[0-9a-zA-Z_-]*$|', $value);
+    }
+
+    public function charForTitle($check) {
+        $value = array_values($check);
+        $value = $value[0];
+
+        return preg_match("|^[0-9a-zA-Z ,!?&()'\":.-]*$|", $value);
+    }
+
+    public function createSlug($string, $id = null) {
+        $slug = Inflector::slug($string, '-');
+        $slug = strtolower($slug);
+        $i = 0;
+        $params = array();
+        $params['conditions'] = array();
+        $params['conditions'][$this->name . '.slug'] = $slug;
+        if (!is_null($id)) {
+            $params['conditions']['not'] = array($this->name . '.id' => $id);
+        }
+        while (count($this->find('all', $params))) {
+            if (!preg_match('/-{1}[0-9]+$/', $slug)) {
+                $slug .= '-' . ++$i;
+            } else {
+                $slug = preg_replace('/[0-9]+$/', ++$i, $slug);
+            }
+            $params['conditions'][$this->name . '.slug'] = $slug;
+        }
+        return $slug;
+    }
 }

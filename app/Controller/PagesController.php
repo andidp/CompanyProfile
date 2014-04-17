@@ -30,48 +30,141 @@ App::uses('AppController', 'Controller');
  */
 class PagesController extends AppController {
 
-/**
- * This controller does not use a model
- *
- * @var array
- */
-	public $uses = array();
+	/**
+	 * Components
+	 *
+	 * @var array
+	 */
+	public $components = array('Paginator');
 
-/**
- * Displays a view
- *
- * @param mixed What page to display
- * @return void
- * @throws NotFoundException When the view file could not be found
- *	or MissingViewException in debug mode.
- */
-	public function display() {
-		$path = func_get_args();
+	/**
+	 * admin_index method
+	 *
+	 * @return void
+	 */
+	public function admin_index() {
+		$this->Page->recursive = 0;
+		$this->set('pages', $this->paginate());
+		$this->set('status', $this->Page->status);
+	}
 
-		$count = count($path);
-		if (!$count) {
-			return $this->redirect('/');
+	/**
+	 * admin_view method
+	 *
+	 * @throws NotFoundException
+	 * @param string $id
+	 * @return void
+	 */
+	public function admin_view($id = null) {
+		$this->Page->id = $id;
+		if (!$this->Page->exists()) {
+			throw new NotFoundException(__('Invalid page'));
 		}
-		$page = $subpage = $title_for_layout = null;
+		$this->set('page', $this->Page->read(null, $id));
+	}
 
-		if (!empty($path[0])) {
-			$page = $path[0];
-		}
-		if (!empty($path[1])) {
-			$subpage = $path[1];
-		}
-		if (!empty($path[$count - 1])) {
-			$title_for_layout = Inflector::humanize($path[$count - 1]);
-		}
-		$this->set(compact('page', 'subpage', 'title_for_layout'));
-
-		try {
-			$this->render(implode('/', $path));
-		} catch (MissingViewException $e) {
-			if (Configure::read('debug')) {
-				throw $e;
+	/**
+	 * admin_add method
+	 *
+	 * @return void
+	 */
+	public function admin_add() {
+		if ($this->request->is('post')) {
+			$this->Page->create();
+			if ($this->Page->save($this->request->data)) {
+				$this->Session->setFlash(__('The page has been saved'), 'success');
+				$this->redirect(array('action' => 'index'));
+			} else {
+				$this->Session->setFlash(__('The page could not be saved. Please, try again.'), 'error');
 			}
-			throw new NotFoundException();
 		}
+        $status = $this->Page->status;
+        $parents = $this->Page->generateTreeList();
+        $this->set(compact('status', 'parents'));
+	}
+
+	/**
+	 * admin_edit method
+	 *
+	 * @throws NotFoundException
+	 * @param string $id
+	 * @return void
+	 */
+	public function admin_edit($id = null) {
+		$this->Page->id = $id;
+		if (!$this->Page->exists()) {
+			throw new NotFoundException(__('Invalid page'));
+		}
+		if ($this->request->is('post') || $this->request->is('put')) {
+			if ($this->Page->save($this->request->data)) {
+				$this->Session->setFlash(__('The page has been saved'), 'success');
+				$this->redirect(array('action' => 'index'));
+			} else {
+				$this->Session->setFlash(__('The page could not be saved. Please, try again.'), 'error');
+			}
+		} else {
+			$this->request->data = $this->Page->read(null, $id);
+		}
+		
+		$parents = $this->Page->generateTreeList();
+		$referer = $this->referer();
+		$this->set('status', $this->Page->status);
+		$this->set('parents', $parents);
+		$this->set('referer', $referer);
+		$this->render('admin_add');
+	}
+
+	/**
+	 * admin_delete method
+	 *
+	 * @throws MethodNotAllowedException
+	 * @throws NotFoundException
+	 * @param string $id
+	 * @return void
+	 */
+	public function admin_delete($id = null) {
+		if (!$this->request->is('post')) {
+			throw new MethodNotAllowedException();
+		}
+		$this->Page->id = $id;
+		if (!$this->Page->exists()) {
+			throw new NotFoundException(__('Invalid page'));
+		}
+		if ($this->Page->delete()) {
+			$this->Session->setFlash(__('Page deleted'), 'success');
+			$this->redirect(array('action' => 'index'));
+		}
+		$this->Session->setFlash(__('Page was not deleted'), 'error');
+		$this->redirect(array('action' => 'index'));
+	}
+        
+    
+    /**
+	 * admin_status method
+	 *
+	 * @throws MethodNotAllowedException
+	 * @throws NotFoundException
+	 * @param string $id
+	 * @param string $status
+	 * @return void
+	 */
+	public function admin_status($id = null, $status = 1) {
+		if (!$this->request->is('post')) {
+			throw new MethodNotAllowedException();
+		}
+		$this->Page->id = $id;
+		if (!$this->Page->exists()) {
+			throw new NotFoundException(__('Invalid page'));
+		}
+		if ($this->Page->saveField('status', $status)) {
+            if ($status == 1) {
+                $this->Session->setFlash(__('Page was set to publish'), 'success');
+			} else {
+                $this->Session->setFlash(__('Page was set to draft'), 'error');
+            }
+            $this->redirect(array('action' => 'index'));
+		}
+		$this->Session->setFlash(__('Page was not deleted'), 'error');
+		$this->redirect(array('action' => 'index'));
 	}
 }

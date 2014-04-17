@@ -105,3 +105,5 @@ CakeLog::config('error', array(
 	'types' => array('warning', 'error', 'critical', 'alert', 'emergency'),
 	'file' => 'error',
 ));
+
+CakePlugin::load('WysiHtml', array('bootstrap' => false, 'routes' => false));
